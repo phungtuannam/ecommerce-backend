@@ -4,6 +4,7 @@ const crypto = require("crypto");
 const KeyTokenService = require("./keyToken.service");
 const { createTokenPair } = require("../auth/authUtils");
 const { getInfoData } = require("../utils/index");
+const { BadRequestError } = require("../core/error.response");
 
 const RoleShop = {
   SHOP: "SHOP",
@@ -14,14 +15,10 @@ const RoleShop = {
 
 class AccessService {
   static signup = async ({ name, email, password }) => {
-    try {
-      //check email already
+      
       const holderShop = await shopModel.findOne({ email }).lean();
       if (holderShop) {
-        return {
-          code: "xxx",
-          message: "shop already register",
-        };
+       throw new BadRequestError('Error: Shop already register')
       }
 
       const passwordHash = await bcrypt.hash(password, 10);
@@ -29,30 +26,27 @@ class AccessService {
         name,
         email,
         password: passwordHash,
-        roles: RoleShop.SHOP,
+        roles: RoleShop.SHOP
       });
 
-      if (newShop) {
-        const privateKey = crypto.randomBytes(64).toString("hex");
-        const publicKey = crypto.randomBytes(64).toString("hex");
-
-        console.log("private key and publickey:::", privateKey, publicKey);
+      if(newShop) {
+        const privateKey = crypto.randomBytes(64).toString('hex')
+        const publicKey = crypto.randomBytes(64).toString('hex')
 
         const keyStore = await KeyTokenService.createKeyToken({
-          userId: newShop._id,
-          privateKey,
-          publicKey,
-        });
+          userId: newShop._id,publicKey,privateKey
+        })
 
         if(!keyStore) {
           return {
             code: 'xxx',
-            message: 'keyStore error!!!'
+            message: 'KeyStore error !!!'
           }
         }
 
-        const tokens = await createTokenPair({userId: newShop.id,email},privateKey,publicKey)
+        const tokens = await createTokenPair({userId: newShop._,email},publicKey,privateKey)
         console.log("tokens:::",tokens)
+
         return {
           code: 201,
           metadata: {
@@ -63,19 +57,7 @@ class AccessService {
 
       }
 
-    
-
-      return {
-        code: 200,
-        metadata: null,
-      };
-    } catch (error) {
-      return {
-        code: "xxxx",
-        message: message.error,
-        status: error,
-      };
-    }
+  
   };
 }
 
